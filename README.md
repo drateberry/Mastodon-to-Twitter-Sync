@@ -1,40 +1,40 @@
 ## Mastodon-to-Twitter-Sync
-从Mastodon同步新嘟文到Twitter
+Syncs new posts from Mastodon to Twitter.
 
-支持媒体上传、长嘟文自动分割，以回复的形式同步，会排除回复和引用、以及以`@`开头的嘟文；支持过短视频自动延长。
+Supports media uploads and the automatic splitting of long posts. Posts are synced as replies on Twitter; replies, quoted posts, and posts beginning with `@` are excluded. Also supports the automatic extension of short videos.
 
-如果是第一次运行，只会从第一次运行后的写的嘟文开始同步
+If this is your first time running the script, it will only begin syncing posts created *after* this initial run.
 
-如果想把之前所有的推文同步到mastodon，[试试这个！](https://github.com/klausi/mastodon-twitter-sync)，我自己搭建的实例已经把所有之前的推文全部成功导入了
+If you wish to sync all your *previous* tweets to Mastodon, [give this a try! ](https://github.com/klausi/mastodon-twitter-sync) — I have successfully imported all my previous tweets into the instance I set up myself.
 
-- 需要用到的包：`requests、mastodon.py、pickle、tweepy、retrying、termcolor、bs4、moviepy`
+- Required packages: `requests`, `mastodon.py`, `pickle`, `tweepy`, `retrying`, `termcolor`, `bs4`, `moviepy`
 
-- 自动生成的`media`文件夹用于保存媒体缓存，`synced_toots.pkl` 保存已经同步过的嘟文
+- The automatically generated `media` folder is used to store cached media files, while `synced_toots.pkl` stores a record of all toots that have already been synchronized.
 
 ![1689405706148.png](https://global.cdn.mikupics.cn/2023/07/15/64b24910d56be.png)
 
-## 使用方法
+## Usage
 
-- 安装包 ```pip install -r requirements.txt```
-- 拷贝一份 `config.sample.py` 到同目录并更名为 `config.py`
-- 修改 `config.py` 中有关 Twitter 和 Mastodon 的参数，之后 `python mtSync.py` 即可
-- 自 commit [9399c2]()(https://github.com/XiaoMouz/Mastodon-to-Twitter-Sync/commit/09399c2255c497b9bfa61beaba481fc21a6b56d8) 之后加入了对 tag `#no_sync` 的判断，在嘟文结尾添加 `#no_sync` 标签将不会同步至推特
+- Install packages: ```pip install -r requirements.txt```
+- Copy `config.sample.py` to the same directory and rename it to `config.py`.
+- Modify the Twitter and Mastodon parameters within `config.py`, then simply run `python mtSync.py`.
+- Since commit [9399c2](https://github.com/XiaoMouz/Mastodon-to-Twitter-Sync/commit/09399c2255c497b9bfa61beaba481fc21a6b56d8), a check for the `#no_sync` tag has been implemented; adding the `#no_sync` tag to the end of a toot will prevent it from being synchronized to Twitter.
 
-## Linux 后台常驻
+## Running as a Background Service (Linux)
 
-- 按发行版及系统情况修改 systemd 文件 `mastodon-twitter-sync.service`
-- ```systemctl enable mastodon-twitter-sync # 开机自启```
-- ```systemctl start mastodon-twitter-sync # 启动```
+- Modify the systemd service file (`mastodon-twitter-sync.service`) to suit your specific Linux distribution and system configuration.
+- ```systemctl enable mastodon-twitter-sync # Enable auto-start on boot```
+- ```systemctl start mastodon-twitter-sync # Start the service```
 
-## config.py 参数说明
-`sync_time`:程序会每隔一定的时间循环访问mastodon，看看有没有新嘟文，由这个时间控制（单位秒）
+## config.py Parameter Descriptions
+`sync_time`: The program periodically polls Mastodon to check for new posts; this parameter controls the interval between checks (in seconds).
 
-`log_to_file`:是否保存日志到`out.log`
+`log_to_file`: Determines whether logs are saved to the file `out.log`.
 
-`limit_retry_attempt`:最大重试次数，默认为13次，仍失败则跳过嘟文，保存嘟文id到sync_failed.txt，设置为0则无限重试，此举可能会耗尽 API 请求次数，但不会因为报错达到最大尝试上限而退出程序
+`limit_retry_attempt`: The maximum number of retry attempts. The default is 13; if retries are exhausted without success, the post is skipped, and its ID is saved to `sync_failed.txt`. Setting this value to 0 enables infinite retries; while this may potentially exhaust your API request quota, it ensures the program does not terminate due to reaching a maximum retry limit caused by errors.
 
-`wait_exponential_max`：单次重试的最大等待时间，单位为毫秒，默认为30分钟，遇到错误，每次的等待时间会越来越长
+`wait_exponential_max`: The maximum waiting time for a single retry attempt (in milliseconds). The default is 30 minutes. In the event of an error, the waiting time between consecutive retries increases exponentially.
 
-`wait_exponential_multiplier`：单次重试的等待时间指数增长，默认为800，800即为`原等待时间x0.8`，如果你想缩短每次的等待时间，可以减少该值
+`wait_exponential_multiplier`: The multiplier governing the exponential growth of the waiting time between retries. The default value is 800 (representing `original waiting time × 0.8`); if you wish to shorten the waiting time for each subsequent retry, you can reduce this value.
 
-每次等待时间（秒） = （ `2`的`当前重试次数`次方 ) * ( `wait_exponential_multiplier` / 1000 )
+Waiting time per retry (seconds) = ( `2` raised to the power of `current retry count` ) * ( `wait_exponential_multiplier` / 1000 )
